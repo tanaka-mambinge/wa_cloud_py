@@ -272,6 +272,7 @@ NB: The following examples are using [Flask](https://flask.palletsprojects.com)
 When a user sends a message to your WhatsApp number, you'll receive a post request to your webhook. To process the message, use the `parse` method. You'll need to provide the request data.
 
 ```python
+from flask.views import MethodView
 from chatterbox.messages.types import MessageType
 
 class GroupAPI(MethodView):
@@ -281,19 +282,19 @@ class GroupAPI(MethodView):
   # verify access token
 
  def post(self):
-   message = whatsapp.parse(request.data)
+    message = whatsapp.parse(request.data)
 
-   if not isinstance(message, NoneType):
+    # check if message is not None
+    if not isinstance(message, NoneType):
 
        # process text message
       if message.type == MessageType.TEXT:
-        # do something with text message
-
-      if message.type == MessageType.Order:
-        # do something with order message
+        # do something with message
 ```
 
 ### Supported message types
+
+Messages can be one of the following types:
 
 - Order - `MessageType.ORDER`
 - Text - `MessageType.TEXT`
@@ -301,6 +302,8 @@ class GroupAPI(MethodView):
 - Image - `MessageType.IMAGE`
 - Location - `MessageType.LOCATION`
 - Video - `MessageType.VIDEO`
+
+If the message type is not supported, the `parse` method will return `None`.
 
 ### User object
 
