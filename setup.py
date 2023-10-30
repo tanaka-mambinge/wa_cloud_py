@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="wa_cloud_py",
-    version="0.1.0",
+    version="0.1.1",
     packages=find_packages(),
     install_requires=["requests>=2.26.0", "loguru>=0.7.0"],
     author="Tanaka Mambinge",
