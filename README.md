@@ -1,6 +1,6 @@
-# Chatterbox
+# WA Cloud Py
 
-Chatterbox is a Python library for sending WhatsApp messages using the WhatsApp Cloud API.
+wa_cloud_py is a Python library for sending WhatsApp messages using the WhatsApp Cloud API.
 
 Supported features:
 
@@ -12,7 +12,7 @@ Supported features:
 
 ## Table of contents
 
-- [Chatterbox](#chatterbox)
+- [WA Cloud Py](#wa-cloud-py)
   - [Table of contents](#table-of-contents)
   - [Getting started](#getting-started)
     - [Installation](#installation)
@@ -48,7 +48,7 @@ Supported features:
 To install the library, run the following command:
 
 ```console
-pip install chatterbox
+pip install wa_cloud_py
 ```
 
 ### Creating WhatsApp instance
@@ -56,7 +56,7 @@ pip install chatterbox
 Before sending messages, you need to configure the access token and phone number id. You can find these values in your Meta Apps dashboard.
 
 ```python
-from chatterbox import WhatsApp
+from wa_cloud_py import WhatsApp
 
 whatsapp = WhatsApp(access_token="WHATSAPP_ACCESS_TOKEN", phone_number_id="WHATSAPP_PHONE_NUMBER_ID")
 ```
@@ -132,7 +132,7 @@ whatsapp.send_location(
 To send interactive buttons, use the `send_interactive_buttons` method. You'll need to provide the recipient's phone number, the message body, and a list of ReplyButtons. The `id` parameter is the button id, and the `title` parameter is the button text.
 
 ```python
-from chatterbox.message_components import ReplyButton
+from wa_cloud_py.message_components import ReplyButton
 
 whatsapp.send_interactive_buttons(
   to="phone_number",
@@ -161,7 +161,7 @@ The SectionRow `id` parameter is the row id, the `title` parameter is the row ti
 The `header` paramater is optional and is used to display a header above the list.
 
 ```python
-from chatterbox.message_components import ListSection, SectionRow
+from wa_cloud_py.message_components import ListSection, SectionRow
 
 whatsapp.send_interactive_list(
   to="phone_number",
@@ -275,8 +275,8 @@ NB: The following examples are using [Flask](https://flask.palletsprojects.com)
 When a user sends a message to your WhatsApp number, you'll receive a post request to your webhook. To process the message, use the `parse` method. You'll need to provide the request data.
 
 ```python
-from chatterbox import WhatsApp
-from chatterbox.message_types import MessageStatus, UserMessage
+from wa_cloud_py import WhatsApp
+from wa_cloud_py.message_types import MessageStatus, UserMessage
 from flask import request
 from flask.views import MethodView
 
@@ -422,7 +422,7 @@ The `MessageStatus` class contains the following properties:
 To update the business profile, use the `update_business_profile` method. You'll need to provide the business profile fields you want to update.
 
 ```python
-from chatterbox.verticals import BusinessVertical
+from wa_cloud_py.verticals import BusinessVertical
 
 whatsapp.update_business_profile(
   about="We sell the best products",
