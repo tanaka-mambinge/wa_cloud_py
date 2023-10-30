@@ -5,12 +5,13 @@ from re import S
 from dotenv import load_dotenv
 
 from chatterbox import WhatsApp
-from chatterbox.messages.components import (
+from chatterbox.message_components import (
     CatalogSection,
     ListSection,
     ReplyButton,
     SectionRow,
 )
+from chatterbox.verticals import BusinessVertical
 
 load_dotenv()
 
@@ -128,6 +129,30 @@ class SendMessage(unittest.TestCase):
         )
         self.assertTrue(message_sent)
 
+    def test_send_audio(self):
+        message_sent, response = whatsapp.send_audio(
+            to=recipient_phone,
+            url="https://cdn.pixabay.com/download/audio/2022/04/25/audio_2a12b61cc0.mp3?filename=virtualitymusik-instrument-yopee-saturdae-110081.mp3&g-recaptcha-response=03AFcWeA5L_YPC483UDFXlUDtv7VnIpwAV1NJ17pxVMqP7WC2-CVyFA1guJT-6Pg1uc8iGJZ5Z_isyWDBfDl2vh4YcrTcpP9NnP9TkGjpwupvK5NojbhLt8gyz1q7JpqIAsjWwXRa9mKk00z9ml9Ee8LfGHymiPuIeWJEPVwUZEfxPHKHCBC0pa6XHvQzpfKwBE-cEQXqXqRWOkcLmVEavQNWyYhaUnnAVgKIMyvHN61aR-fZhXIAEOOo_j1CHhAlSsLI0ozIYE8CmhlHbx0WcSH1lZOj0WFa0bGXsIJ8f5soDbQJv66wMRSOEssUkwyU6EAU9jlMwaM0Ui44nyRyCmAyBcz74K6paWn3QrvGyGgwtJjl8-Z_gizOycTG2N5UxU0hyP9EeJOrSOtcPwhZeWdskEFub41I8SSL54XjBw3lIh0-ZswAsrSdcUYn4yqvkOYV3gtFRtsXLAnomoLJ0o3WlLBeG1SF1v31gN8jxgos1iTwtQ6pXNg93ZnjTym4wh3BecTzTuTH5oHRVWNpfT3DLLmdV8P4oryjPUIxp_C5qLwvpalisJ9ydHcOSWZBzG8zpOxNUYdxLLnmHxJFe3c-XQ7q-e9jfjA&remote_template=1",
+        )
+        self.assertTrue(message_sent)
+
+    def test_send_document(self):
+        message_sent, response = whatsapp.send_document(
+            to=recipient_phone,
+            url="https://business.facebook.com/products/feed_template/?feed_type=products&include_only_subvertical_fields=false&is_excel_template=false&item_capabilities[0]=mini_shops&file_type=CSV&is_supplementary_feed=false&catalog_id=1282347042264709",
+            filename="products.csv",
+            caption="WhatsApp online products template",
+        )
+        self.assertTrue(message_sent)
+
+    def test_send_video(self):
+        message_sent, response = whatsapp.send_video(
+            to=recipient_phone,
+            url="https://www.pexels.com/download/video/4812205/",
+            caption="Beautiful flowers",
+        )
+        self.assertTrue(message_sent)
+
     def test_send_catalog(self):
         message_sent, response = whatsapp.send_catalog(
             to=recipient_phone, body="Have a look at our products 🛍"
@@ -169,4 +194,15 @@ class SendMessage(unittest.TestCase):
 
     def test_get_commerce_settings(self):
         message_sent, response = whatsapp.commerce_settings()
+        self.assertTrue(message_sent)
+
+    def test_update_business_profile(self):
+        message_sent, response = whatsapp.update_business_profile(
+            about="We sell the best products",
+            email="support@business.com",
+            address="1600 Amphitheatre Parkway",
+            description="We sell the best products",
+            websites=["https://business.com"],
+            vertical=BusinessVertical.RETAIL,
+        )
         self.assertTrue(message_sent)

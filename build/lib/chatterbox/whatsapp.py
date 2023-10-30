@@ -5,9 +5,10 @@ import requests
 from loguru import logger
 from requests import Response
 
-from .messages.components import CatalogSection, ListSection, ReplyButton
-from .messages.types import (
+from chatterbox.message_components import CatalogSection, ListSection, ReplyButton
+from chatterbox.message_types import (
     InteractiveMessage,
+    MessageStatus,
     MessageType,
     OrderMessage,
     TextMessage,
@@ -40,10 +41,12 @@ class WhatsApp:
         self.access_token = access_token
         self.phone_number_id = phone_number_id
         self.version = version
-        self.url = (
+        self.messages_url = (
             f"https://graph.facebook.com/{self.version}/{self.phone_number_id}/messages"
         )
         self.commerce_url = f"https://graph.facebook.com/{self.version}/{self.phone_number_id}/whatsapp_commerce_settings"
+        self.business_profile_url = f"https://graph.facebook.com/{self.version}/{self.phone_number_id}/whatsapp_business_profile"
+
         self.headers = {
             "Authorization": f"Bearer {self.access_token}",
             "Content-Type": "application/json",
@@ -81,6 +84,10 @@ class WhatsApp:
             else:
                 logger.error(f"Unsupported message type: {message_type}")
                 return None
+        elif len(msg_value.get("statuses", [])) > 0:
+            status = msg_value.get("statuses")[0]
+            return MessageStatus(status)
+
         else:
             logger.error("No messages found in request")
             return None
@@ -135,7 +142,7 @@ class WhatsApp:
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
             "to": to,
-            "type": MessageType.TEXT.value,
+            "type": MessageType.TEXT,
             "text": {"preview_url": preview_url, "body": body},
         }
 
@@ -145,7 +152,7 @@ class WhatsApp:
                 "context": {"message_id": context_message_id},
             }
 
-        res = requests.post(self.url, headers=self.headers, json=data)
+        res = requests.post(self.messages_url, headers=self.headers, json=data)
         return self._parse_response(res, phone_number=to)
 
     def send_reaction(self, to: str, message_id: str, emoji: str) -> Tuple[bool, dict]:
@@ -166,11 +173,11 @@ class WhatsApp:
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
             "to": to,
-            "type": MessageType.REACTION.value,
+            "type": MessageType.REACTION,
             "reaction": {"message_id": message_id, "emoji": emoji},
         }
 
-        res = requests.post(self.url, headers=self.headers, json=data)
+        res = requests.post(self.messages_url, headers=self.headers, json=data)
         return self._parse_response(res, phone_number=to)
 
     def send_location(
@@ -194,7 +201,7 @@ class WhatsApp:
         data = {
             "messaging_product": "whatsapp",
             "to": to,
-            "type": MessageType.LOCATION.value,
+            "type": MessageType.LOCATION,
             "location": {
                 "longitude": longitude,
                 "latitude": latitude,
@@ -203,17 +210,17 @@ class WhatsApp:
             },
         }
 
-        res = requests.post(self.url, headers=self.headers, json=data)
+        res = requests.post(self.messages_url, headers=self.headers, json=data)
         return self._parse_response(res, phone_number=to)
 
-    def send_image(self, to: str, caption: str, url: str) -> Tuple[bool, dict]:
+    def send_image(self, to: str, url: str, caption: str = None) -> Tuple[bool, dict]:
         """
         Sends an image message to the specified phone number using the WhatsApp Cloud API.
 
         Args:
             to (str): The phone number to send the message to.
-            caption (str): The caption to include with the image.
             url (str): The URL of the image to send.
+            caption (str, optional): The caption to include with the image. Defaults to None.
 
         Returns:
             Tuple[bool, dict]: A tuple containing a boolean indicating whether the message was sent successfully and a
@@ -224,21 +231,24 @@ class WhatsApp:
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
             "to": to,
-            "type": MessageType.IMAGE.value,
-            "image": {"link": url, "caption": caption},
+            "type": MessageType.IMAGE,
+            "image": {"link": url},
         }
 
-        res = requests.post(self.url, headers=self.headers, json=data)
+        if caption is not None:
+            data["image"]["caption"] = caption
+
+        res = requests.post(self.messages_url, headers=self.headers, json=data)
         return self._parse_response(res, phone_number=to)
 
-    def send_video(self, to: str, caption: str, url: str) -> Tuple[bool, dict]:
+    def send_video(self, to: str, url: str, caption: str = None) -> Tuple[bool, dict]:
         """
         Sends a video message to the specified phone number using the WhatsApp Cloud API.
 
         Args:
             to (str): The phone number to send the message to.
-            caption (str): The caption to include with the video.
             url (str): The URL of the video to send.
+            caption (str, optional): The caption to include with the video. Defaults to None.
 
         Returns:
             Tuple[bool, dict]: A tuple containing a boolean indicating whether the message was sent successfully and a
@@ -249,11 +259,68 @@ class WhatsApp:
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
             "to": to,
-            "type": MessageType.VIDEO.value,
-            "video": {"link": url, "caption": caption},
+            "type": MessageType.VIDEO,
+            "video": {"link": url},
         }
 
-        res = requests.post(self.url, headers=self.headers, json=data)
+        if caption is not None:
+            data["video"]["caption"] = caption
+
+        res = requests.post(self.messages_url, headers=self.headers, json=data)
+        return self._parse_response(res, phone_number=to)
+
+    def send_audio(self, to: str, url: str) -> Tuple[bool, dict]:
+        """
+        Sends a video message to the specified phone number using the WhatsApp Cloud API.
+
+        Args:
+            to (str): The phone number to send the message to.
+            url (str): The URL of the audio to send.
+
+        Returns:
+            Tuple[bool, dict]: A tuple containing a boolean indicating whether the message was sent successfully and a
+            dictionary containing the response data.
+        """
+
+        data = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to,
+            "type": MessageType.AUDIO,
+            "audio": {"link": url},
+        }
+
+        res = requests.post(self.messages_url, headers=self.headers, json=data)
+        return self._parse_response(res, phone_number=to)
+
+    def send_document(
+        self, to: str, url: str, caption: str = None, filename: str = None
+    ) -> Tuple[bool, dict]:
+        """
+        Sends a document message to the specified phone number using the WhatsApp Cloud API.
+
+        Args:
+            to (str): The phone number to send the message to.
+            url (str): The URL of the document to send.
+            caption (str, optional): The caption to include with the document. Defaults to None.
+            filename (str, optional): The filename of the document. Defaults to None.
+        """
+
+        data = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to,
+            "type": MessageType.DOCUMENT,
+            "document": {"link": url},
+        }
+
+        if caption is not None:
+            data["document"]["caption"] = caption
+
+        if filename is not None:
+            data["document"]["filename"] = filename
+
+        res = requests.post(self.messages_url, headers=self.headers, json=data)
         return self._parse_response(res, phone_number=to)
 
     def send_interactive_buttons(
@@ -276,7 +343,7 @@ class WhatsApp:
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
             "to": to,
-            "type": MessageType.INTERACTIVE.value,
+            "type": MessageType.INTERACTIVE,
             "interactive": {
                 "type": "button",
                 "body": {"text": body},
@@ -284,7 +351,7 @@ class WhatsApp:
             },
         }
 
-        res = requests.post(self.url, headers=self.headers, json=data)
+        res = requests.post(self.messages_url, headers=self.headers, json=data)
         return self._parse_response(res, phone_number=to)
 
     def send_interactive_list(
@@ -318,7 +385,7 @@ class WhatsApp:
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
             "to": to,
-            "type": MessageType.INTERACTIVE.value,
+            "type": MessageType.INTERACTIVE,
             "interactive": {
                 "type": "list",
                 "header": {"type": "text", "text": ""},
@@ -337,7 +404,7 @@ class WhatsApp:
         if footer:
             data["interactive"]["footer"] = footer
 
-        res = requests.post(self.url, headers=self.headers, json=data)
+        res = requests.post(self.messages_url, headers=self.headers, json=data)
         return self._parse_response(res, phone_number=to)
 
     def send_catalog(self, to: str, body: str, footer: str = None):
@@ -358,7 +425,7 @@ class WhatsApp:
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
             "to": to,
-            "type": "interactive",
+            "type": MessageType.INTERACTIVE,
             "interactive": {
                 "type": "catalog_message",
                 "body": {
@@ -373,7 +440,7 @@ class WhatsApp:
         if footer:
             data["interactive"]["footer"] = {"text": footer}
 
-        res = requests.post(self.url, headers=self.headers, json=data)
+        res = requests.post(self.messages_url, headers=self.headers, json=data)
         return self._parse_response(res, phone_number=to)
 
     def send_catalog_product(
@@ -403,7 +470,7 @@ class WhatsApp:
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
             "to": to,
-            "type": "interactive",
+            "type": MessageType.INTERACTIVE,
             "interactive": {
                 "type": "product",
                 "body": {"text": body},
@@ -417,7 +484,7 @@ class WhatsApp:
         if footer:
             data["interactive"]["footer"] = {"text": footer}
 
-        res = requests.post(self.url, headers=self.headers, json=data)
+        res = requests.post(self.messages_url, headers=self.headers, json=data)
         return self._parse_response(res, phone_number=to)
 
     def send_catalog_product_list(
@@ -449,7 +516,7 @@ class WhatsApp:
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
             "to": to,
-            "type": "interactive",
+            "type": MessageType.INTERACTIVE,
             "interactive": {
                 "type": "product_list",
                 "header": {"type": "text", "text": header},
@@ -464,7 +531,7 @@ class WhatsApp:
         if footer:
             data["interactive"]["footer"] = {"text": footer}
 
-        res = requests.post(self.url, headers=self.headers, json=data)
+        res = requests.post(self.messages_url, headers=self.headers, json=data)
         return self._parse_response(res, phone_number=to)
 
     def mark_as_read(self, message_id: str) -> Tuple[bool, dict]:
@@ -485,7 +552,7 @@ class WhatsApp:
             "message_id": message_id,
         }
 
-        res = requests.post(self.url, headers=self.headers, json=data)
+        res = requests.post(self.messages_url, headers=self.headers, json=data)
 
         if res.status_code == 200:
             if self.verbose:
@@ -498,8 +565,57 @@ class WhatsApp:
             )
         return False, res.json()
 
-    def update_business_profile(self) -> Tuple[bool, dict]:
-        pass
+    def update_business_profile(
+        self,
+        about: str = "",
+        address: str = "",
+        description: str = "",
+        email: str = "",
+        vertical: str = "",
+        websites: List[str] = [],
+    ) -> Tuple[bool, dict]:
+        """
+        Updates the business profile using the WhatsApp Business API.
+
+        Args:
+            about (str, optional): A short description of the business. Defaults to "".
+            address (str, optional): The address of the business. Defaults to "".
+            description (str, optional): A longer description of the business. Defaults to "".
+            email (str, optional): The email address of the business. Defaults to "".
+            vertical (str, optional): The vertical of the business. Defaults to "".
+            websites (List[str], optional): A list of website URLs associated with the business. Defaults to [].
+
+        Returns:
+            Tuple[bool, dict]: A tuple containing a boolean indicating whether the business profile was updated successfully
+            and a dictionary containing the response data.
+        """
+
+        data = {
+            "messaging_product": "whatsapp",
+            "vertical": vertical,
+        }
+
+        if about:
+            data["about"] = about
+        if address:
+            data["address"] = address
+        if description:
+            data["description"] = description
+        if email:
+            data["email"] = email
+        if websites:
+            data["websites"] = websites
+
+        res = requests.post(self.business_profile_url, headers=self.headers, json=data)
+
+        if res.status_code == 200:
+            if self.verbose:
+                logger.success(f"Business profile updated successfully")
+            return True, res.json()
+
+        if self.verbose:
+            logger.error(f"Failed to update business profile.\nReason: {res.json()}")
+        return False, res.json()
 
     def update_cart_status(self, is_cart_visible: bool) -> Tuple[bool, dict]:
         """
