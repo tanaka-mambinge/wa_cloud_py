@@ -8,5 +8,5 @@ setup(
     author="Tanaka Mambinge",
     author_email="tmambingez@gmail.com",
     description="A Python library for sending WhatsApp messages using the WhatsApp Cloud API",
-    download_url="https://github.com/tanaka-mambinge/wa_cloud_py/archive/refs/tags/v0.1.0.tar.gz",
+    download_url="https://github.com/tanaka-mambinge/wa_cloud_py/archive/refs/tags/v0.1.1.tar.gz",
 )
