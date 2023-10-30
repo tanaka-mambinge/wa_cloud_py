@@ -4,14 +4,14 @@ from re import S
 
 from dotenv import load_dotenv
 
-from chatterbox import WhatsApp
-from chatterbox.message_components import (
+from wa_cloud_py import WhatsApp
+from wa_cloud_py.message_components import (
     CatalogSection,
     ListSection,
     ReplyButton,
     SectionRow,
 )
-from chatterbox.verticals import BusinessVertical
+from wa_cloud_py.verticals import BusinessVertical
 
 load_dotenv()
 

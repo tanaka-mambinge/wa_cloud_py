@@ -1,3 +1,3 @@
-from chatterbox import message_components, message_types
-from chatterbox.verticals import BusinessVertical
-from chatterbox.whatsapp import WhatsApp
+from wa_cloud_py import message_components, message_types
+from wa_cloud_py.verticals import BusinessVertical
+from wa_cloud_py.whatsapp import WhatsApp

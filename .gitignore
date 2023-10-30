@@ -3,5 +3,5 @@
 __pycache__/
 /env
 /dist
-/chatterbox.egg-info
+/wa_cloud_py.egg-info
 /build

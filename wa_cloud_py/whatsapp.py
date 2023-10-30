@@ -5,8 +5,8 @@ import requests
 from loguru import logger
 from requests import Response
 
-from chatterbox.message_components import CatalogSection, ListSection, ReplyButton
-from chatterbox.message_types import (
+from wa_cloud_py.message_components import CatalogSection, ListSection, ReplyButton
+from wa_cloud_py.message_types import (
     InteractiveMessage,
     MessageStatus,
     MessageType,
