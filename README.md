@@ -4,8 +4,6 @@ Chatterbox is a Python library for sending WhatsApp messages using the WhatsApp 
 
 Supported features:
 
-!todo react to message
-
 - Sending messages (text, image, audio, video, document, location, reaction)
 - Processing incoming messages (text, image, audio, video, document, location)
 - Managing product catalog
@@ -35,11 +33,13 @@ Supported features:
     - [Send single product from catalog](#send-single-product-from-catalog)
     - [Send list of products from catalog](#send-list-of-products-from-catalog)
   - [Processing incoming messages](#processing-incoming-messages)
-    - [Supported message types](#supported-message-types)
+    - [User messages vs Message status](#user-messages-vs-message-status)
     - [User object](#user-object)
     - [Text messages](#text-messages)
     - [Order messages](#order-messages)
     - [Interactive messages](#interactive-messages)
+    - [Message status](#message-status)
+  - [Update business profile](#update-business-profile)
 
 ## Getting started
 
@@ -48,7 +48,7 @@ Supported features:
 To install the library, run the following command:
 
 ```console
-pip install name
+pip install chatterbox
 ```
 
 ### Creating WhatsApp instance
@@ -92,7 +92,7 @@ whatsapp.send_text(
 To react to a message, use the `send_reaction` method. You'll need to provide the recipient's phone number, the message id, and the emoji to use.
 
 ```python
-whatsapp.send_reaction(to="phone_number", message_id="wamid.abc123", emoji="👍")
+whatsapp.send_reaction(to="phone_number", message_id="wamid.abc123", emoji="😲")
 ```
 
 ### Send image
@@ -132,7 +132,7 @@ whatsapp.send_location(
 To send interactive buttons, use the `send_interactive_buttons` method. You'll need to provide the recipient's phone number, the message body, and a list of ReplyButtons. The `id` parameter is the button id, and the `title` parameter is the button text.
 
 ```python
-from chatterbox.messages.components import ReplyButton
+from chatterbox.message_components import ReplyButton
 
 whatsapp.send_interactive_buttons(
   to="phone_number",
@@ -161,7 +161,7 @@ The SectionRow `id` parameter is the row id, the `title` parameter is the row ti
 The `header` paramater is optional and is used to display a header above the list.
 
 ```python
-from chatterbox.messages.components import ListSection, SectionRow
+from chatterbox.message_components import ListSection, SectionRow
 
 whatsapp.send_interactive_list(
   to="phone_number",
@@ -214,7 +214,7 @@ whatsapp.update_cart_status(is_cart_visible=True)
 
 ### Check commerece settings
 
-To check the commerce settings, use the `commerce_settings` method.
+To check the commerce settings (cart and catalog status), use the `commerce_settings` method.
 
 ```python
 whatsapp.commerce_settings()
@@ -223,6 +223,8 @@ whatsapp.commerce_settings()
 ### Send product catalog
 
 ![Product catalog](assets/images/product-catalog.png)
+
+Useful when you want to give the user a list of all available products.
 
 To send a product catalog, use the `send_product_catalog` method. You'll need to provide the recipient's phone number, the catalog title, and a list of CatalogItems. The CatalogItem contains a list of CatalogItemButtons.
 
@@ -249,6 +251,8 @@ whatsapp.send_catalog_product(
 
 ![List of products from catalog](assets/images/list-of-products-from-catalog.png)
 
+Useful when you want to give the user a filtered list of products. For example showing the user a list of products that closely match their search query.
+
 To send a list of products from a catalog, use the `send_catalog_product_list` method. You'll need to provide the recipient's phone number, the catalog id, the header text, the body text, and a list of CatalogSections. The CatalogSection contains a section title and a list of retailer product ids.
 
 ```python
@@ -268,69 +272,105 @@ whatsapp.send_catalog_product_list(
 
 NB: The following examples are using [Flask](https://flask.palletsprojects.com)
 
-
 When a user sends a message to your WhatsApp number, you'll receive a post request to your webhook. To process the message, use the `parse` method. You'll need to provide the request data.
 
 ```python
+from chatterbox import WhatsApp
+from chatterbox.message_types import MessageStatus, UserMessage
+from flask import request
 from flask.views import MethodView
-from chatterbox.messages.types import MessageType
+
 
 class GroupAPI(MethodView):
- init_every_request = False
+    init_every_request = False
 
- def get(self):
-  # verify access token
+    def get(self):
+        #verify token
+        pass
 
- def post(self):
-    message = whatsapp.parse(request.data)
+    def post(self):
+        whatsapp = WhatsApp(access_token="access_token", phone_number_id="phone_number_id")
+        message = whatsapp.parse(request.data)
 
-    # check if message is not None
-    if not isinstance(message, NoneType):
+        # check if a the message was sent by a user
+        if isinstance(message, UserMessage):
 
-       # process text message
-      if message.type == MessageType.TEXT:
-        # do something with message
+            # process text message
+            if isinstance(message, TextMessage):
+               message_sent, res = whatsapp.send_text(
+                   to=message.user.phone_number,
+                   body="Hello World",
+               )
+
+            # process order
+            if isinstance(message, OrderMessage):
+                pass
+
+        # print status of message you sent to the user
+        elif isinstance(message, MessageStatus):
+            print(message)
+
+        # handle unsupported message types
+        else:
+            print("Unsupported message type")
+
+        return "", 200
+
+
+wa_webhook = GroupAPI.as_view(f"WaWebhook")
 ```
 
-### Supported message types
+### User messages vs Message status
 
-Messages can be one of the following types:
+User messages are messages sent by a user. Message status are messages sent by the WhatsApp Cloud API to confirm the status of a message you sent to a user. All user messages inherit from the `UserMessage` class.
 
-- Order - `MessageType.ORDER`
-- Text - `MessageType.TEXT`
-- Interactive - `MessageType.INTERACTIVE`
-- Image - `MessageType.IMAGE`
-- Location - `MessageType.LOCATION`
-- Video - `MessageType.VIDEO`
+The following user message classes inherit from the `UserMessage` class:
 
-If the message type is not supported, the `parse` method will return `None`.
+- [`TextMessage`](#text-messages) - A text only message sent by the user to your WhatsApp number.
+- [`InteractiveMessage`](#interactive-messages) - A message sent by the user when they click on an interactive button or list item.
+- [`OrderMessage`](#order-messages) - A message sent by the user when they place an order using the WhatsApp cart.
+- `ImageMessage` - A message sent by the user when they send an image.
+- `AudioMessage` - A message sent by the user when they send an audio file.
+- `DocumentMessage` - A message sent by the user when they send a document.
 
 ### User object
 
-All incoming messages have a `user` property. The user object contains the following properties:
+All incoming user messages have a `user` property. The user object contains the following properties:
 
 - `name: str` - The user's name on WhatsApp
 - `phone_number: str` = The user's phone number. Useful when you want to reply to the user's message.
 
 ### Text messages
 
-If the message type is `MessageType.TEXT`, you can access thefollowing properties:
+```python
+#process text message
+if isinstance(message, TextMessage):
+    pass
+```
+
+When the user sends a text message, you'll receive a `TextMessage` object. If the message type is `MessageType.TEXT`, you can access the following properties:
 
 - `id: str` - The message id e.g. `wamid.abc123`
 - `user: User` - The [user object](#user-object)
 - `context_message_id: str` - The message id of the message the user replied to e.g. `wamid.abc123`
 - `timestamp: str` - The time the message was sent by the user e.g. `1696669497`
-- `type: str` - The message type e.g. `MessageType.TEXT`. Type is always a [`MessageType`](#supported-message-types) enum value. 
+- `type: str` - The message type e.g. `text`
 - `body: str` - The message body e.g. `Hello there!`
 
 ### Order messages
+
+```python
+#process order
+if isinstance(message, OrderMessage):
+    pass
+```
 
 Users can use the WhatsApp cart to place orders. If the message type is `MessageType.ORDER`, you can access thefollowing properties:
 
 - `id: str` - The message id e.g. `wamid.abc123`
 - `user: User` - The [user object](#user-object)
 - `timestamp: str` - The time the message was sent by the user e.g. `1696669497`
-- `type: str` - The message type e.g. `MessageType.TEXT`. Type is always a [`MessageType`](#supported-message-types) enum value.
+- `type: str` - The message type e.g. `order`
 - `catalog_id: str` - The ID of the catalog the user ordered from e.g. `123`
 - `products: List[Product]` - A list of products the user ordered. Each product has the following properties:
   - `id: str` - The product id e.g. `product_id_1`
@@ -340,13 +380,58 @@ Users can use the WhatsApp cart to place orders. If the message type is `Message
 
 ### Interactive messages
 
-Both interactive buttons and interactive lists return the same message type. If the message type is `MessageType.INTERACTIVE`, you can access thefollowing properties:
+```python
+#process message based on reply_id
+if isinstance(message, InteractiveMessage):
+    pass
+```
+
+When a user clicks on an interactive button or list item, you'll receive an interactive message. If the message type is `MessageType.INTERACTIVE`, you can access thefollowing properties:
 
 - `id: str` - The message id e.g. `wamid.abc123`
 - `user: User` - The [user object](#user-object)
 - `context_message_id: str` - The message id of the message the user replied to. In this case it's the interactive message. Message id e.g. `wamid.abc123`
 - `timestamp: str` - The time the message was sent by the user e.g. `1696669497`
-- `type: str` - The message type e.g. `MessageType.TEXT`. Type is always a [`MessageType`](#supported-message-types) enum value.
+- `type: str` - The message type e.g. `interactive`
 - `reply_id: str` - The id of the button or list item the user clicked e.g. `pay_with_ecocash`
 - `title: str` - The title of the button or list item the user clicked e.g. EcoCash
 - `description: str` - The description of the list item the user clicked e.g. Phone number required
+
+### Message status
+
+When you send a message to a user, you'll receive 2 api calls from the WhatsApp Cloud API. The first call is to confirm that the message was sent to the user. The second call is to confirm that the message was delivered to the user.
+
+The `MessageStatus` class contains the following properties:
+
+- `id: str` - The id of the message you sent to the user e.g. `wamid.abc123`
+- `status: str` - The status of the message. Can be one of the following values:
+  - `sent` - The message was sent to the user (single tick)
+  - `delivered` - The message was delivered to the user (double tick)
+- `timestamp: str` - The time the message was sent to the user e.g. `1696669497`
+- `recipient_phone: str` - The phone number of the user the message was sent to e.g. `263712345678`
+- `billable: bool` - Whether the message was billable or not e.g. `True`
+- `pricing_model: bool` - The pricing model used to bill the message e.g. `CBP` (Conversation Based Pricing)
+- `message_category: str` - The message category used for billing. Can be one of the following values:
+  - `service` - The message was sent for service purposes
+  - `marketing` - The message was sent for marketing purposes
+  - `utility` - The message was sent for utility purposes
+  - `auth` - The message was sent for authentication purposes
+
+## Update business profile
+
+To update the business profile, use the `update_business_profile` method. You'll need to provide the business profile fields you want to update.
+
+```python
+from chatterbox.verticals import BusinessVertical
+
+whatsapp.update_business_profile(
+  about="We sell the best products",
+  email="support@business.com",
+  address="1600 Amphitheatre Parkway",
+  description="We sell the best products",
+  websites=["https://business.com"],
+  vertical=BusinessVertical.RETAIL,
+)
+```
+
+The following are the supported BusinessVerticals: `UNDEFINED, OTHER, AUTO, BEAUTY, APPAREL, EDU, ENTERTAIN, EVENT_PLAN, FINANCE, GROCERY, GOVT, HOTEL, HEALTH, NONPROFIT, PROF_SERVICES, RETAIL, TRAVEL, RESTAURANT, NOT_A_BIZ`
